@@ -5,10 +5,6 @@ on:
     branches:
       - '**'
       # - $default-branch
-  pull_request:
-    branches:
-      - '**'
-      # - $default-branch
 
 jobs:
   build:
@@ -60,3 +56,12 @@ jobs:
     - name: Docker Build
       run: |
         make docker
+        
+    - name: Docker login
+        run: |
+          docker login --username '${{ secrets.DOCKER_USER }}' --password '${{ secrets.DOCKER_PSWD }}'  '${{ secrets.DOCKER_REPO }}' 
+        
+    - name: Docker tag & Push
+        run: |
+          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:${{ github.sha }}
+          docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:${{ github.sha }}   
