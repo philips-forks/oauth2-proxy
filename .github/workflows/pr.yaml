@@ -58,7 +58,7 @@ jobs:
         
     - name: Docker tag & Push
       run: |
-          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest .
+          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
           docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
     
         
