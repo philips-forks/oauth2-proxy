@@ -1,0 +1,64 @@
+name: PR
+
+on:
+  pull_request:
+    branches:
+      - '**'
+      # - $default-branch
+
+jobs:
+  build:
+    env:
+      COVER: true
+    runs-on: ubuntu-20.04
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Go 1.16
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.x
+      id: go
+
+    - name: Get dependencies
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.36.0
+        curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        chmod +x ./cc-test-reporter
+    - name: Verify Code Generation
+      run: |
+        make verify-generate
+    - name: Lint
+      run: |
+        make lint
+    - name: Build
+      run: |
+        make build
+    - name: Test
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+      run: |
+        ./.github/workflows/test.sh
+  docker:
+    runs-on: ubuntu-20.04
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Docker Build
+      run: |
+        make docker
+        
+    - name: Docker login
+        run: |
+          docker login --username '${{ secrets.DOCKER_USER }}' --password '${{ secrets.DOCKER_PSWD }}'  '${{ secrets.DOCKER_REPO }}' 
+        
+    - name: Docker tag & Push
+        run: |
+          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
+          docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
+    
+        
