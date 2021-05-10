@@ -435,7 +435,7 @@ var _ = Describe("Legacy Options", func() {
 		}
 
 		xAuthIntrospectResponse := Header{
-			Name:                 "X-Auth-Introspect-Response",
+			Name:                 "X-Auth-Introspect-Value",
 			PreserveRequestValue: false,
 			Values: []HeaderValue{
 				{

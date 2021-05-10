@@ -68,9 +68,6 @@ func (s *SessionState) String() string {
 	if len(s.Groups) > 0 {
 		o += fmt.Sprintf(" groups:%v", s.Groups)
 	}
-	if s.IntrospectClaims != "" {
-		o += fmt.Sprintf(" Introspection Claims:%s", s.IntrospectClaims)
-	}
 	return o + "}"
 }
 

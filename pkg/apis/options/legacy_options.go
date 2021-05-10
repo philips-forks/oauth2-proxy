@@ -445,7 +445,7 @@ func getXAuthRequestAccessTokenHeader() Header {
 
 func getXAuthIntrospectResponseHeaders() Header {
 	return Header{
-		Name: "X-Auth-Introspect-Response",
+		Name: "X-Auth-Introspect-Value",
 		Values: []HeaderValue{
 			{
 				ClaimSource: &ClaimSource{
