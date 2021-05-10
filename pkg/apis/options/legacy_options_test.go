@@ -674,10 +674,10 @@ var _ = Describe("Legacy Options", func() {
 					PassUserHeaders:   false,
 					PassAuthorization: false,
 
-					SetBasicAuth:             false,
-					SetXAuthRequest:          false,
-					SetIntrospectionResponse: true,
-					SetAuthorization:         false,
+					SetBasicAuth:          false,
+					SetXAuthRequest:       false,
+					SetIntrospectionValue: true,
+					SetAuthorization:      false,
 
 					PreferEmailToUser:    false,
 					BasicAuthPassword:    "",
