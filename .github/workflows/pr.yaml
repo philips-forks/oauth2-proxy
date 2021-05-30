@@ -1,7 +1,7 @@
-name: Continuous Integration
+name: PR
 
 on:
-  push:
+  pull_request:
     branches:
       - 'edi-foundation-integration'
       # - $default-branch
@@ -27,25 +27,20 @@ jobs:
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.36.0
         curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
         chmod +x ./cc-test-reporter
-
     - name: Verify Code Generation
       run: |
         make verify-generate
-
     - name: Lint
       run: |
         make lint
-
     - name: Build
       run: |
         make build
-
     - name: Test
       env:
         CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       run: |
         ./.github/workflows/test.sh
-
   docker:
     runs-on: ubuntu-20.04
     steps:
@@ -63,7 +58,7 @@ jobs:
         
     - name: Docker tag & Push
       run: |
-          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:${{ github.sha }}
-          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:latest
-          docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:${{ github.sha }}
-          docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:latest
+          docker tag  '${{ secrets.DOCKER_REPO }}'/oauth2-proxy:latest '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
+          docker push '${{ secrets.DOCKER_REPO }}'/edi-foundation-oauth2-proxy:prlatest
+    
+        
