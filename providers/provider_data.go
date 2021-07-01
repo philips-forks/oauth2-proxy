@@ -119,10 +119,10 @@ func defaultURL(u *url.URL, d *url.URL) *url.URL {
 
 // OIDCClaims is a struct to unmarshal the OIDC claims from an ID Token payload
 type OIDCClaims struct {
-	Subject  string   `json:"sub"`
-	Email    string   `json:"-"`
-	Groups   []string `json:"-"`
-	Verified *bool    `json:"email_verified"`
+	Subject string   `json:"sub"`
+	Email   string   `json:"-"`
+	Groups  []string `json:"-"`
+	//Verified *bool    `json:"email_verified"`
 
 	raw map[string]interface{}
 }
@@ -163,10 +163,10 @@ func (p *ProviderData) buildSessionFromClaims(idToken *oidc.IDToken) (*sessions.
 
 	// `email_verified` must be present and explicitly set to `false` to be
 	// considered unverified.
-	verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
-	if verifyEmail && claims.Verified != nil && !*claims.Verified {
-		return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
-	}
+	// verifyEmail := (p.EmailClaim == OIDCEmailClaim) && !p.AllowUnverifiedEmail
+	// if verifyEmail && claims.Verified != nil && !*claims.Verified {
+	// 	return nil, fmt.Errorf("email in id_token (%s) isn't verified", claims.Email)
+	// }
 
 	return ss, nil
 }
