@@ -25,7 +25,7 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 		}
 	}
 
-	return &http.Cookie{
+	c := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     path,
@@ -35,6 +35,12 @@ func MakeCookie(req *http.Request, name string, value string, path string, domai
 		Expires:  now.Add(expiration),
 		SameSite: sameSite,
 	}
+
+	if expiration != time.Duration(0) {
+		c.Expires = now.Add(expiration)
+	}
+
+	return c
 }
 
 // MakeCookieFromOptions constructs a cookie based on the given *options.CookieOptions,
