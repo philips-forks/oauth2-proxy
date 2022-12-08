@@ -28,6 +28,7 @@ type SessionState struct {
 	User              string   `msgpack:"u,omitempty"`
 	Groups            []string `msgpack:"g,omitempty"`
 	PreferredUsername string   `msgpack:"pu,omitempty"`
+	IntrospectClaims  string   `msgpack:"ic,omitempty"`
 }
 
 // IsExpired checks whether the session has expired
@@ -95,6 +96,8 @@ func (s *SessionState) GetClaim(claim string) []string {
 		return groups
 	case "preferred_username":
 		return []string{s.PreferredUsername}
+	case "introspect-claims":
+		return []string{s.IntrospectClaims}
 	default:
 		return []string{}
 	}

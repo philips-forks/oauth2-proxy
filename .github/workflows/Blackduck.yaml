@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          ref: main
+        
       - name: blackduck scan
         run: powershell -ExecutionPolicy RemoteSigned -NoExit -File ${{ github.workspace }}\Build\PS\Invoke-BlackduckDetect.ps1 -SourcePath ${{ github.workspace }}
