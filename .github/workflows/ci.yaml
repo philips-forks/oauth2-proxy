@@ -10,8 +10,6 @@ on:
     - '.bumpversion.cfg'
   pull_request:
     branches: [ edi-foundation-integration ]
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
