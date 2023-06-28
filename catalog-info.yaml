@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: oauth2-proxy
+  annotations:
+    github.com/project-slug: philips-forks/oauth2-proxy
+    philips.com/techdocs-builder: local
+  description: TBD
+spec:
+  type: library
+  lifecycle: experimental
+  owner: pics
+  component: Reporting
