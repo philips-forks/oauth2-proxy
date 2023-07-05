@@ -128,13 +128,21 @@ func (p *OIDCProvider) enrichFromIntrospectURL(ctx context.Context, s *sessions.
 	params := url.Values{}
 	params.Add("token", s.AccessToken)
 	basicAuth := b64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.ClientID, clientSecret)))
-	result := requests.New(p.IntrospectURL.String()).
+	request := requests.New(p.IntrospectURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
-		WithBody(bytes.NewBufferString(params.Encode())).
 		SetHeader("Authorization", fmt.Sprintf("Basic %s", basicAuth)).
-		SetHeader("Content-Type", "application/x-www-form-urlencoded").
-		Do()
+		SetHeader("Content-Type", "application/x-www-form-urlencoded")
+
+	var v, ok = ctx.Value("headers").(map[string][]string)
+	if ok {
+		orgctx, ok := v["Edisp-Org-Id"]
+		if ok {
+			params.Add("org_ctx", orgctx[0])
+		}
+	}
+	request = request.WithBody(bytes.NewBufferString(params.Encode()))
+	result := request.Do()
 
 	if result.StatusCode() != http.StatusOK {
 		return fmt.Errorf("error while requesting introspect claims, status code - %d", result.StatusCode())

@@ -794,7 +794,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = p.enrichSessionState(req.Context(), session)
+	err = p.enrichSessionState(req.Context(), session, req.Header)
 	if err != nil {
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
@@ -860,7 +860,7 @@ func (p *OAuthProxy) redeemCode(req *http.Request) (*sessionsapi.SessionState, e
 	return s, nil
 }
 
-func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState) error {
+func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.SessionState, headers map[string][]string) error {
 	var err error
 	if s.Email == "" {
 		// TODO(@NickMeves): Remove once all provider are updated to implement EnrichSession
@@ -871,7 +871,8 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
 		}
 	}
 
-	return p.provider.EnrichSession(ctx, s)
+	ctxWithHeaders := context.WithValue(ctx, "headers", headers)
+	return p.provider.EnrichSession(ctxWithHeaders, s)
 }
 
 // AuthOnly checks whether the user is currently logged in (both authentication
