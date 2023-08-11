@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"strings"
 
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
@@ -52,6 +54,18 @@ type ErrorPageOpts struct {
 	Messages []interface{}
 }
 
+func envToMap() map[string]string {
+	envMap := make(map[string]string)
+
+	for _, v := range os.Environ() {
+		before, after, found := strings.Cut(v, "=")
+		if found {
+			envMap[before] = after
+		}
+	}
+	return envMap
+}
+
 // WriteErrorPage writes an error page to the given response writer.
 // It uses the passed redirectURL to give users the option to go back to where
 // they originally came from or try signing in again.
@@ -69,6 +83,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 		RequestID   string
 		Footer      template.HTML
 		Version     string
+		Env         map[string]string
 	}{
 		Title:       http.StatusText(opts.Status),
 		Message:     e.getMessage(opts.Status, opts.AppError, opts.Messages...),
@@ -78,6 +93,7 @@ func (e *errorPageWriter) WriteErrorPage(rw http.ResponseWriter, opts ErrorPageO
 		RequestID:   opts.RequestID,
 		Footer:      template.HTML(e.footer),
 		Version:     e.version,
+		Env:         envToMap(),
 	}
 
 	if err := e.template.Execute(rw, data); err != nil {
