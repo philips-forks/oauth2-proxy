@@ -813,7 +813,7 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request, si
 		if resp.StatusCode() != 200 {
 			logger.Errorf("error while calling backend logout url, returned error code %v", resp.StatusCode())
 		}
-		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"))
+		p.picsAuditClient.CreateSuccessfulLogoutAuditEntry(session, req.RequestURI, req.Header.Get("edisp-org-id"), req)
 	} else {
 		if providerData.BackendLogoutURL == "" {
 			return
@@ -987,7 +987,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 			p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 			return
 		}
-		p.picsAuditClient.CreateSuccessfulLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"))
+		p.picsAuditClient.CreateSuccessfulLoginAuditEntry(session, appRedirect, req.Header.Get("edisp-org-id"), req)
 		http.Redirect(rw, req, appRedirect, http.StatusFound)
 	} else {
 		logger.PrintAuthf(session.Email, req, logger.AuthFailure, "Invalid authentication via OAuth2: unauthorized")

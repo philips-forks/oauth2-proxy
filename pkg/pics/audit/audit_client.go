@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -52,28 +54,41 @@ func NewAuditClient(opts *ClientOpts) (*Client, error) {
 	return &Client{enabled: opts.Enabled, apiSignature: apiSignature, client: client, opts: opts}, nil
 }
 
-func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
+func (c *Client) CreateSuccessfulLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, req *http.Request) {
 	coding := Coding{
 		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication"}
-	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding, req)
 }
 
-func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, errorDesc string) {
+func (c *Client) CreateFailedLoginAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, errorDesc string, req *http.Request) {
 	coding := Coding{
 		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110114", Display: "User Authentication"}
-	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc, &coding)
+	c.createAuditEntry(ss, appURL, tenantID, "1", errorDesc, &coding, req)
 }
 
-func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, appURL string, tenantID string) {
+func (c *Client) CreateSuccessfulLogoutAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, req *http.Request) {
 	coding := Coding{
 		System: "http://hl7.org/fhir/ValueSet/audit-event-type", Version: "1", Code: "110123", Display: "User Logout All Sessions"}
-	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding)
+	c.createAuditEntry(ss, appURL, tenantID, "0", "Success", &coding, req)
 }
 
-func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string, coding *Coding) {
+func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tenantID string, outcomeCode string, outcomeDesc string, coding *Coding, req *http.Request) {
 	if !c.enabled {
 		return
 	}
+
+	// Extract target IP address (server's IP or host)
+	targetIP := ""
+	if req != nil {
+		targetIP = req.Host
+	}
+
+	// Service/component identifier (THIS IS TEMPORARY, UNTIL WE FIGURE OUT WHAT IS EXPECTED FROM THIS FIELD)
+	serviceIDs := []string{"oauth2proxy"}
+	if hn, err := os.Hostname(); err == nil {
+		serviceIDs = append(serviceIDs, hn)
+	}
+
 	auditObject := RootEvent{
 		ResourceType: "AuditEvent",
 		Event: &Event{
@@ -82,9 +97,17 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 			DateTime:    time.Now().UTC().Format(time.RFC3339),
 			Outcome:     outcomeCode,
 			OutcomeDesc: outcomeDesc},
-
 		Participant: []*Participant{
-			{AltID: ss.User, UserID: UserID{Value: ss.Email}, Name: ss.PreferredUsername, Requestor: true}},
+			{
+				AltID:     ss.User,
+				UserID:    UserID{Value: ss.Email},
+				Name:      ss.PreferredUsername,
+				Requestor: true,
+				Network: &Network{
+					Type: "source",
+				},
+			},
+		},
 		Source: Source{
 			Identifier: Identifier{
 				Type: &Coding{
@@ -127,6 +150,8 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 				},
 			},
 		},
+		ServiceIDs:      serviceIDs,
+		TargetIPAddress: targetIP,
 	}
 
 	auditMessage, err := json.Marshal(auditObject)
