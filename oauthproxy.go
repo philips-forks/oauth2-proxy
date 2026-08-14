@@ -944,12 +944,26 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	nonce, appRedirect, err := decodeState(req.Form.Get("state"), p.encodeState)
+	stateParam := req.Form.Get("state")
+	logger.Printf("[OAuth Callback] State parameter (raw): %s", stateParam)
+	
+	nonce, appRedirect, err := decodeState(stateParam, p.encodeState)
 	if err != nil {
+		logger.Errorf("[OAuth Callback] State decode FAILED: %v | state: %s", err, stateParam)
+		// Try to decode manually for debugging
+		if p.encodeState {
+			decoded, decErr := base64.RawURLEncoding.DecodeString(stateParam)
+			if decErr == nil {
+				logger.Printf("[OAuth Callback] Base64 decoded state: %s", string(decoded))
+			} else {
+				logger.Printf("[OAuth Callback] Base64 decode also failed: %v", decErr)
+			}
+		}
 		logger.Errorf("Error while parsing OAuth2 state: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logger.Printf("[OAuth Callback] State decoded successfully - nonce: %s, redirect: %s", nonce, appRedirect)
 
 	// calculate the cookie name
 	cookieName := cookies.GenerateCookieName(p.CookieOptions, nonce)
@@ -964,19 +978,27 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	logger.Printf("[OAuth Callback] Starting token exchange - code: %s...", req.Form.Get("code")[:20])
 	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
 	if err != nil {
+		logger.Errorf("[OAuth Callback] Token exchange FAILED: %v", err)
+		logger.Errorf("[OAuth Callback] Authorization code was: %s", req.Form.Get("code"))
+		logger.Errorf("[OAuth Callback] Redirect URI: %s", p.getOAuthRedirectURI(req))
 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logger.Printf("[OAuth Callback] Token exchange SUCCESS - email: %s", session.Email)
 
+	logger.Printf("[OAuth Callback] Enriching session state (introspection)...")
 	err = p.enrichSessionState(req.Context(), session)
 	if err != nil {
+		logger.Errorf("[OAuth Callback] Session enrichment FAILED: %v", err)
 		logger.Errorf("Error creating session during OAuth2 callback: %v", err)
 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
 		return
 	}
+	logger.Printf("[OAuth Callback] Session enrichment SUCCESS")
 
 	csrf.ClearCookie(rw, req)
 
