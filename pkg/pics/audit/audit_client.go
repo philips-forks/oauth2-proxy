@@ -172,12 +172,15 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 		AuditErrorMetricCounter.Inc()
 		return
 	}
-	err = c.send(string(auditMessage))
-	if err != nil {
-		logger.Errorf("%s: could not send the audit message to the url '%s': %v", ErrPersitAuditEvent.Error(), c.opts.URL, err)
-		AuditErrorMetricCounter.Inc()
-		return
-	}
+
+	// Send audit message asynchronously to avoid blocking OAuth callback response
+	go func() {
+		err := c.send(string(auditMessage))
+		if err != nil {
+			logger.Errorf("%s: could not send the audit message to the url '%s': %v", ErrPersitAuditEvent.Error(), c.opts.URL, err)
+			AuditErrorMetricCounter.Inc()
+		}
+	}()
 }
 
 func (c *Client) send(msg string) error {
