@@ -86,18 +86,11 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
 		RedirectURL: redirectURL,
 	}
 
-	logger.Printf("[OIDC Redeem] Exchanging code at: %s", p.RedeemURL.String())
-	logger.Printf("[OIDC Redeem] Redirect URI: %s", redirectURL)
-	logger.Printf("[OIDC Redeem] Code: %s...", code[:20])
-	
 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
 	token, err := c.Exchange(ctx, code, opts...)
 	if err != nil {
-		logger.Errorf("[OIDC Redeem] Token exchange FAILED: %v", err)
-		logger.Errorf("[OIDC Redeem] Failed at URL: %s", p.RedeemURL.String())
 		return nil, fmt.Errorf("token exchange failed: %v", err)
 	}
-	logger.Printf("[OIDC Redeem] Token exchange SUCCESS - token type: %s", token.TokenType)
 
 	return p.createSession(ctx, token, false)
 }

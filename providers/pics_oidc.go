@@ -9,7 +9,6 @@ import (
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -30,8 +29,6 @@ func (p *OIDCProvider) PicsEnrichFromIntrospectURL(ctx context.Context, s *sessi
 			Path:   "/authorize/oauth2/v4/introspect",
 		}
 	}
-	logger.Printf("[Introspect] Requesting introspect from: %s", p.IntrospectURL)
-	logger.Printf("[Introspect] Access token: %s...", s.AccessToken[:20])
 
 	result := requests.New(p.IntrospectURL.String()).
 		WithContext(ctx).
@@ -42,11 +39,8 @@ func (p *OIDCProvider) PicsEnrichFromIntrospectURL(ctx context.Context, s *sessi
 		Do()
 
 	if result.StatusCode() != http.StatusOK {
-		logger.Errorf("[Introspect] FAILED - Status: %d", result.StatusCode())
-		logger.Errorf("[Introspect] Response body: %s", string(result.Body()))
 		return fmt.Errorf("error while requesting introspect claims, status code - %d", result.StatusCode())
 	}
-	logger.Printf("[Introspect] SUCCESS - Status: %d", result.StatusCode())
 	s.IntrospectClaims = b64.StdEncoding.EncodeToString(result.Body())
 	return nil
 }
