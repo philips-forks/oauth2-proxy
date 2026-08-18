@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
 )
 
@@ -29,6 +30,7 @@ func (p *OIDCProvider) PicsEnrichFromIntrospectURL(ctx context.Context, s *sessi
 			Path:   "/authorize/oauth2/v4/introspect",
 		}
 	}
+	logger.Printf("Requesting introspect from '%s'", p.IntrospectURL)
 
 	result := requests.New(p.IntrospectURL.String()).
 		WithContext(ctx).
