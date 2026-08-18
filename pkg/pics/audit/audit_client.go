@@ -172,7 +172,7 @@ func (c *Client) createAuditEntry(ss *sessions.SessionState, appURL string, tena
 		AuditErrorMetricCounter.Inc()
 		return
 	}
-	
+
 	// Send audit message asynchronously to avoid blocking OAuth callback response
 	go func() {
 		err := c.send(string(auditMessage))
