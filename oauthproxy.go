@@ -438,6 +438,7 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
 		RefreshPeriod:   opts.Cookie.Refresh,
 		RefreshSession:  provider.RefreshSession,
 		ValidateSession: provider.ValidateSession,
+		Cookie:          &opts.Cookie,
 	}))
 
 	oidcProviderSettings := opts.Providers[0].OIDCConfig

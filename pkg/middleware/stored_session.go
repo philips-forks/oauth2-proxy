@@ -9,7 +9,9 @@ import (
 
 	"github.com/justinas/alice"
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
 )
@@ -48,6 +50,10 @@ type StoredSessionLoaderOptions struct {
 	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
 	// refresh it, we must re-validate using this validation.
 	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
+
+	// PICS: cookie settings used to re-issue a session cookie that has passed half
+	// of its lifetime, so clients that never trigger a refresh keep a live cookie.
+	Cookie *options.Cookie
 }
 
 // NewStoredSessionLoader creates a new storedSessionLoader which loads
@@ -60,6 +66,7 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor 
 		refreshPeriod:    opts.RefreshPeriod,
 		sessionRefresher: opts.RefreshSession,
 		sessionValidator: opts.ValidateSession,
+		cookie:           opts.Cookie,
 	}
 	return ss.loadSession
 }
@@ -71,6 +78,7 @@ type storedSessionLoader struct {
 	refreshPeriod    time.Duration
 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
+	cookie           *options.Cookie
 }
 
 // loadSession attempts to load a session as identified by the request cookies.
@@ -98,10 +106,38 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
 			}
 		}
 
+		if session != nil && err == nil {
+			s.renewStaleCookie(rw, req, session)
+		}
+
 		// Add the session to the scope if it was found
 		scope.Session = session
 		next.ServeHTTP(rw, req)
 	})
+}
+
+// renewStaleCookie re-issues the session cookie once it is older than half of its
+// lifetime. A refresh triggered by another client of the same session (for example a
+// server renewing a hub token) resets the session age without reaching this browser,
+// so without this the browser's cookie would silently expire while the session lives on.
+func (s *storedSessionLoader) renewStaleCookie(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) {
+	if s.cookie == nil || s.cookie.Expire <= 0 || session.SessionJustRefreshed {
+		return
+	}
+
+	requestCookie, err := req.Cookie(s.cookie.Name)
+	if err != nil {
+		return
+	}
+
+	_, issuedAt, ok := encryption.Validate(requestCookie, s.cookie.Secret, s.cookie.Expire)
+	if !ok || time.Since(issuedAt) < s.cookie.Expire/2 {
+		return
+	}
+
+	if err := s.store.Save(rw, req, session); err != nil {
+		logger.Errorf("Error re-issuing session cookie: %v", err)
+	}
 }
 
 // getValidatedSession is responsible for loading a session and making sure

@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+
 	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/clock"
@@ -426,6 +429,67 @@ var _ = Describe("Stored Session Suite", func() {
 				},
 				numConcReqs:   1,
 				refreshPeriod: 1 * time.Minute,
+			}),
+		)
+	})
+
+	Context("renewStaleCookie", func() {
+		const cookieName = "_oauth2_proxy"
+		const cookieSecret = "0123456789abcdef"
+
+		signedCookie := func(issuedAt time.Time) string {
+			value, err := encryption.SignedValue(cookieSecret, cookieName, []byte("ticket"), issuedAt)
+			Expect(err).ToNot(HaveOccurred())
+			return value
+		}
+
+		type renewStaleCookieTableInput struct {
+			cookie       *options.Cookie
+			issuedAgo    time.Duration
+			session      *sessionsapi.SessionState
+			expectedSave bool
+		}
+
+		DescribeTable("re-issues the cookie only when it is past half of its lifetime",
+			func(in renewStaleCookieTableInput) {
+				saved := false
+				store := &fakeSessionStore{
+					SaveFunc: func(_ http.ResponseWriter, _ *http.Request, _ *sessionsapi.SessionState) error {
+						saved = true
+						return nil
+					},
+				}
+				loader := &storedSessionLoader{store: store, cookie: in.cookie}
+
+				req := httptest.NewRequest("GET", "/", nil)
+				req.AddCookie(&http.Cookie{Name: cookieName, Value: signedCookie(time.Now().Add(-in.issuedAgo))})
+				loader.renewStaleCookie(httptest.NewRecorder(), req, in.session)
+
+				Expect(saved).To(Equal(in.expectedSave))
+			},
+			Entry("with a fresh cookie", renewStaleCookieTableInput{
+				cookie:       &options.Cookie{Name: cookieName, Secret: cookieSecret, Expire: 28 * time.Minute},
+				issuedAgo:    1 * time.Minute,
+				session:      &sessionsapi.SessionState{},
+				expectedSave: false,
+			}),
+			Entry("with a cookie past half of its lifetime", renewStaleCookieTableInput{
+				cookie:       &options.Cookie{Name: cookieName, Secret: cookieSecret, Expire: 28 * time.Minute},
+				issuedAgo:    15 * time.Minute,
+				session:      &sessionsapi.SessionState{},
+				expectedSave: true,
+			}),
+			Entry("with a session that was just refreshed", renewStaleCookieTableInput{
+				cookie:       &options.Cookie{Name: cookieName, Secret: cookieSecret, Expire: 28 * time.Minute},
+				issuedAgo:    15 * time.Minute,
+				session:      &sessionsapi.SessionState{SessionJustRefreshed: true},
+				expectedSave: false,
+			}),
+			Entry("without cookie settings", renewStaleCookieTableInput{
+				cookie:       nil,
+				issuedAgo:    15 * time.Minute,
+				session:      &sessionsapi.SessionState{},
+				expectedSave: false,
 			}),
 		)
 	})
