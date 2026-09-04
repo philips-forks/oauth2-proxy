@@ -145,6 +145,11 @@ func (p *OIDCProvider) RefreshSession(ctx context.Context, s *sessions.SessionSt
 	}
 	s.SessionJustRefreshed = true
 
+	// PICS: the introspect claims describe the access token, so they must follow the new one.
+	if err := p.PicsEnrichFromIntrospectURL(ctx, s); err != nil {
+		logger.Errorf("Warning: Introspect URL request failed after refresh: %v", err)
+	}
+
 	return true, nil
 }
 

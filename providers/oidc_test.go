@@ -235,6 +235,30 @@ func TestOIDCProviderRefreshSessionIfNeededWithIdToken(t *testing.T) {
 	assert.Equal(t, refreshToken, existingSession.RefreshToken)
 }
 
+func TestOIDCProviderRefreshSessionUpdatesIntrospectClaims(t *testing.T) {
+	body, _ := json.Marshal(redeemTokenResponse{
+		AccessToken:  accessToken,
+		ExpiresIn:    10,
+		TokenType:    "Bearer",
+		RefreshToken: refreshToken,
+	})
+
+	server, provider := newTestOIDCSetup(body, []byte(`{}`), []byte(`{"active":true,"exp":2}`))
+	defer server.Close()
+
+	existingSession := &sessions.SessionState{
+		AccessToken:      "changeit",
+		RefreshToken:     refreshToken,
+		Email:            "changeit",
+		User:             "changeit",
+		IntrospectClaims: base64.StdEncoding.EncodeToString([]byte(`{"active":true,"exp":1}`)),
+	}
+	refreshed, err := provider.RefreshSession(context.Background(), existingSession)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, refreshed)
+	assert.Equal(t, base64.StdEncoding.EncodeToString([]byte(`{"active":true,"exp":2}`)), existingSession.IntrospectClaims)
+}
+
 func TestOIDCProviderCreateSessionFromToken(t *testing.T) {
 	testCases := map[string]struct {
 		IDToken        idTokenClaims
